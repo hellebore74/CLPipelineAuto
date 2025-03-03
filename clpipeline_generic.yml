@@ -1,0 +1,30 @@
+
+pipeline:
+  pipeline_id: ccin2p3_cosmodc2_20deg
+  local_dir: /sps/lsst/users/elles/CLPipeline_parsl/venv_parsl/pipeline
+  output_dir: ${LOCAL_DIR}/${PIPELINE_ID}/output
+  CLpipeline_yaml: xxx
+  
+setup:
+  extra_conda_setup: module add Programming_Languages/anaconda
+  extra_mpi_setup: module load HPC_GPU/openmpi/4.1.4
+  env_variables: conda_dir local_dir output_dir pipeline_id survey_data_dir survey_data_files config_yaml tjpcov_sacc_file tjpcov_outdir
+
+survey:
+  survey_data_files : ${LOCAL_DIR}/inputs_config_generic/cosmodc2/cosmodc2_20deg2_datafiles.yml
+  survey_data_dir: /sps/lsst/groups/clusters/cl_pipeline_project/TXPipe_data
+
+txpipe:
+  conda_dir: /sps/lsst/users/elles/CLPipeline_parsl/CLPipeline
+  job_input_dir: ${LOCAL_DIR}/job_input_config
+  pipeline_yaml: ${LOCAL_DIR}/inputs_config_generic/cosmodc2/pipeline-20deg2-CL-in2p3.yml
+  config_yaml: ${LOCAL_DIR}/inputs_config_generic/cosmodc2/config-20deg2-CL.yml
+
+tjpcov_firecrown:
+  conda_dir : /sps/lsst/users/elles/CLPipeline_parsl/CLPipeline
+  pipeline_yaml: ${LOCAL_DIR}/inputs_config_generic/CL_test_concat.yml
+  config_yaml: ${LOCAL_DIR}/inputs_config_generic/config.yml
+  tjpcov_sacc_file: /pbs/home/e/ebarroso/LSST_France/mock_data_run/counts_tjpcov/cluster_redshift_richness_deltasigma_sacc_data.sacc
+  tjpcov_outdir: /pbs/home/e/ebarroso/LSST_France/mock_data_run/counts_tjpcov
+
+  
