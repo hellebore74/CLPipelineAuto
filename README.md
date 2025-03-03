@@ -17,7 +17,7 @@ Create and configure input yaml files for a given survey :
 
 To create the pipeline files :
 
-    python parsl_jobs --create clpipeline_generic.yml
+    python parsl_jobs.py --create clpipeline_generic.yml
 
 
 To launch the jobs -- currently in development
