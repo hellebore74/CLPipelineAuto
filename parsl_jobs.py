@@ -11,9 +11,9 @@ import argparse
 from parsl.app.app import join_app, python_app, bash_app
 
 from parsl.config import Config
-from parsl.providers import SlurmProvider
+from parsl.providers import SlurmProvider, LocalProvider
 from parsl.launchers import SrunLauncher
-from parsl.executors import HighThroughputExecutor
+from parsl.executors import HighThroughputExecutor,ThreadPoolExecutor
 from parsl.addresses import address_by_interface
 from parsl.monitoring.monitoring import MonitoringHub
 from parsl.addresses import address_by_hostname
@@ -23,6 +23,12 @@ from parsl.addresses import address_by_hostname
 #logging.basicConfig(level=logging.DEBUG)
 
 # Confid defines the different backends that might be used (batch, local, ...)
+#   CAUTION : it is ceci that is going to launch jobs in paralle/mpi/...
+#             this parsl instance should only provide the correct slurm or local configuration 
+#                 in order to run on a machine that is going to match the ceci needs
+#   For example : for a txpipe mpi job, we only have to ask for a machien with the necessary cores, 
+#                     but we will not launch the parsl job as an mpi job (this will be done by ceci)
+
 config = Config(
     executors=[
         HighThroughputExecutor(
@@ -32,12 +38,17 @@ config = Config(
                 exclusive=False,
                 nodes_per_block=1,
                 # string to prepend to #SBATCH blocks in the submit
-                scheduler_options='#SBATCH --time=05:00:00\n#SBATCH --partition=hpc\n#SBATCH --ntasks=30\n#SBATCH --cpus-per-task=1\n#SBATCH --mem=128000\n',
+                scheduler_options='#SBATCH --time=05:00:00\n#SBATCH --ntasks=30\n#SBATCH --cpus-per-task=1\n#SBATCH --mem=128000\n',
                 # Command to be run before starting a worker
                 worker_init='module load python; source activate parsl',
                 init_blocks=1,
                 max_blocks=10,
             ),
+        ),
+
+        ThreadPoolExecutor(
+            label='txpipe_local',
+            max_threads=4,
         ),
 
         HighThroughputExecutor(
@@ -47,7 +58,7 @@ config = Config(
                 exclusive=False,
                 nodes_per_block=1,
                 # string to prepend to #SBATCH blocks in the submit
-                scheduler_options='#SBATCH --time=05:00:00\n#SBATCH --partition=hpc,lsst\n#SBATCH --cpus-per-task=1\n#SBATCH --mem=128000',
+                scheduler_options='#SBATCH --time=05:00:00\n#SBATCH --cpus-per-task=1\n#SBATCH --mem=128000',
                 # Command to be run before starting a worker
                 worker_init='module load python; source activate parsl',
                 init_blocks=1,
@@ -118,8 +129,13 @@ from parsl import python_app, bash_app
     
 # Definiton of the different types of jobs that are going to be launched
 #   if a job has to be launched once another is done, it has to be defined as first paareter
-@bash_app(executors=["txpipe"])
+#@bash_app(executors=["txpipe"])
 def run_txpipe(condadir, extra_setup, yamlfile, stderr=parsl.AUTO_LOGNAME, stdout=parsl.AUTO_LOGNAME):
+    print('sh txpipe_script.sh {} "{}" {}'.format(condadir, extra_setup, yamlfile))
+    #return 'sh txpipe_script.sh {} "{}" {}'.format(condadir, extra_setup, yamlfile)
+
+@bash_app(executors=["txpipe_local"])
+def run_txpipe_local(condadir, extra_setup, yamlfile, stderr=parsl.AUTO_LOGNAME, stdout=parsl.AUTO_LOGNAME):
     return 'sh txpipe_script.sh {} {} {}'.format(condadir, extra_setup, yamlfile)
 
 # @bash_app(executors=["tjpcov_local"])
@@ -157,7 +173,7 @@ def main():
     # --------------------------------------
 
     if args.create:
-        from toolbox import createPipelineSetup
+        from pipeline_toolbox import createPipelineSetup
         createPipelineSetup(args.create)
 
         sys.exit()
@@ -173,37 +189,44 @@ def main():
 
     # Name of the CLPipeline yaml file
 
-    from toolbox import read_yaml_file_general, get_batch_data
+    from pipeline_toolbox import read_yaml_file_general
+    from pipeline_toolbox import set_max_process_defined_in_stages
+    from yaml_toolbox import get_batch_data
     clpipe_config,_ = read_yaml_file_general(args.run)
     for key in clpipe_config:
         print(clpipe_config[key])
 
     general_CLpipeline_yaml = clpipe_config["pipeline"]["CLpipeline_yaml"]
-    extra_script_setup=";".join([clpipe_config["setup"]["extra_conda_setup"],clpipe_config["setup"]["extra_mpi_setup"]])
 
     site_data, maxProcess  = get_batch_data(general_CLpipeline_yaml, "TXPipe")
 
     print(site_data)
     print(maxProcess)
 
-    sys.exit()
-        
-    # todo : check if job is batch/mpi or local by reading yaml file site//name
-    #        check if txpipe is done
+    if "max_threads" in site_data and site_data["max_threads"]<maxProcess:
+        set_max_process_defined_in_stages(general_CLpipeline_yaml,[("id","TXPipe")],site_data["max_threads"])
 
+    # Develop a way to check that txpipe is already done
     bTxPipeJobDone = False
     jobTxPipe = None
 
     if not bTxPipeJobDone:
-        print(">>>> TXPIPE JOB")
-    
+        print("\n>>>> TXPIPE JOB")
+        if site_data["name"]=="local":
+            extra_script_setup=clpipe_config["setup"]["extra_conda_setup"]
+            jobTxPipe = run_txpipe_local( clpipe_config["txpipe"]["conda_dir"],
+                                            extra_script_setup,
+                                            general_CLpipeline_yaml
+                                            )
 
-    
-    
-        jobTxPipe = run_txpipe( clpipe_config["txpipe"]["conda_dir"],
-                                extra_script_setup,
-                                general_CLpipeline_yaml
-                                )
+        else :
+            print(" - mpi option")
+            extra_script_setup=clpipe_config["setup"]["extra_mpi_setup"]
+            jobTxPipe = run_txpipe( clpipe_config["txpipe"]["conda_dir"],
+                                    extra_script_setup,
+                                    general_CLpipeline_yaml
+                                    )
+            
         bashing.append(jobTxPipe)
 
     sys.exit()

@@ -1,14 +1,14 @@
 
 pipeline:
   pipeline_id: ccin2p3_cosmodc2_20deg
-  local_dir: /sps/lsst/users/elles/CLPipeline_parsl/venv_parsl/pipeline
+  local_dir: /sps/lsst/users/elles/CLPipeline_parsl/venv_parsl/CLPipelineAuto
   output_dir: ${LOCAL_DIR}/${PIPELINE_ID}/output
   CLpipeline_yaml: xxx
   
 setup:
-  extra_conda_setup: module add Programming_Languages/anaconda
-  extra_mpi_setup: module load HPC_GPU/openmpi/4.1.4
-  env_variables: conda_dir local_dir output_dir pipeline_id survey_data_dir survey_data_files config_yaml tjpcov_sacc_file tjpcov_outdir
+  extra_module_setup: module load Programming_Languages/anaconda 
+  extra_mpi_setup: "module load Programming_Languages/anaconda HPC_GPU/openmpi/4.1.4"
+  env_variables: conda_dir local_dir output_dir pipeline_id survey_data_dir survey_data_files pipeline_yaml config_yaml tjpcov_sacc_file tjpcov_outdir
 
 survey:
   survey_data_files : ${LOCAL_DIR}/inputs_config_generic/cosmodc2/cosmodc2_20deg2_datafiles.yml

@@ -211,6 +211,8 @@ def yaml_set_value(filename, key, value, index=0):
 
 def get_document_from_yaml_file(filename, patternList):
 
+    print("Get document : ",filename," ",patternList)
+
     #Load the yaml files
     with open(filename) as config_file:
         raw_config_text = config_file.read()
@@ -226,7 +228,7 @@ def get_document_from_yaml_file(filename, patternList):
     return None
             
 
-def update_yaml_file_document(filename, filedoc, pattern):
+def update_yaml_file_document(filename, filedoc, pattern_input):
     """ Insert content of a yaml file (filedoc) in an initial file (filename)]
           starting from the position given by the pattern
         ( used to insert TXpipe yaml file in concatenated yaml file)   
@@ -235,23 +237,37 @@ def update_yaml_file_document(filename, filedoc, pattern):
     text=f.readlines()
     f.close()
 
+    print(pattern_input)
+    if isinstance(pattern_input,tuple): 
+        pattern=pattern_input[0]+":"+pattern_input[1]
+    else:
+        pattern=pattern_input
     pattern = pattern.replace(" ","")
 
-    index=-1
+    # Document beginning
+    index0=-1
     for i,l in enumerate(text):
         if l.strip().replace(" ","")==pattern: 
-            index=i
+            index0=i
+            break
+    if index0<0: return
+
+    # Beginning of next document
+    index1=-1
+    for i,l in enumerate(text[index0:]):
+        if l.strip()=="---": 
+            index1=index0+i
             break
 
-    if index<0: return
-
+    # Insert new document
     f=open(filedoc,"r")
     text_doc=f.readlines()
     f.close()
 
-    text_res=text[0:index+1]
+    text_res=text[0:index0+1]
     text_res=text_res+text_doc
-    text_res=text_res+text[index+1:]
+    if index1>0:
+        text_res=text_res+text[index1:]
 
     f=open(filename,"w")
     f.writelines(text_res)
@@ -273,6 +289,9 @@ def read_yaml_file_general(filename, index=0, bVerbose=False):
         dataList.append(data)
 
     return dataList[0], raw_config_text
+
+
+
 
 
 #    # YAML input file.
@@ -326,154 +345,4 @@ def get_batch_data(filename, dataId):
         if "nprocess" in d: nprocessList.append(d["nprocess"])
 
     return data["site"], max(nprocessList)
-    
-
-def read_and_decode_general_pipeline(filename,output_filename):
-    """ Read the pipeline yaml file and expand all the environement variables 
-        Save the result in the pipeline directory
-    """
-
-    pipe_config, raw_text = read_yaml_file_general(filename)
-    
-    # Create environment variables for the pipeline
-    setup_environment_parameter(pipe_config, "pipeline", True)
-    setup_environment_parameter(pipe_config, "survey", True)
-    setup_environment_parameter(pipe_config, "txpipe", True)
-    config_text_init = os.path.expandvars(raw_text)
-    pipe_config_expand = yaml_ruamel.load(config_text_init)
-
-    setup_environment_parameter(pipe_config, "tjpcov_firecrown", True)
-    config_text_init = os.path.expandvars(raw_text)
-    pipe_config_expand2 = yaml_ruamel.load(config_text_init)
-
-    pipe_config_expand["tjpcov_firecrown"]=pipe_config_expand2["tjpcov_firecrown"].copy()
-
-    #update yaml file
-    yaml_ruamel.dump(pipe_config_expand,open(output_filename, 'w'))
-    
-    return
-
-
-def createPipelineSetup(filename):
-    """ Create the global pipeline yaml files  (TXpipe, TJPCov and FireCrown)
-        - create a directory named ${LOCAL_DIR}/pipeline_id
-        - copy the yaml config and pipeline files (TxPipe and CLPipeline ) in the directory
-        - configure all the files by replacing environement parameters by their values
-        - concatenate CLPipeline and TX pipe pipeline yaml files 
-
-        all the files needed to launch the CLPipeline are stored in the directory with
-          fully defined pathes for all the references to output and log dirs, data files, etc...
-          ==> the CLPipeline can be launched from any filesystem directory 
-    """
-
-    pipe_config, raw_text = read_yaml_file_general(filename)
-    
-    # Create environment variables for the pipeline
-    setup_environment_parameter(pipe_config, "pipeline", True)
-
-    # Create directory based on pipeline Id and save a copy of the current clpipeline yml file
-    pipeDir = os.environ["LOCAL_DIR"]+"/"+pipe_config["pipeline"]["pipeline_id"]
-    print(f"Pipeline directory : {pipeDir}")
-    if not os.path.isdir(pipeDir): os.makedirs(pipeDir)
-
-    final_global_pipeline=pipeDir+"/clpipeline.yml"
-    read_and_decode_general_pipeline(filename,final_global_pipeline)
-
-    # ---------------------------------------------------------
-    # Create TxPipe yaml file
-    # ---------------------------------------------------------
-
-    # Set the environement variables as defined in yaml file
-    setup_environment_parameter(pipe_config, "txpipe", True)
-    setup_environment_parameter(pipe_config, "survey", True)
-
-    # Read the clpipeline yaml file
-    config_text_init = os.path.expandvars(raw_text)
-    pipe_config_env = yaml.safe_load(config_text_init)
-
-    # Merge txpipe yaml and survey data files
-    #   copy the txpipe and survey yaml files and merge them (inputs key)
-    txpipe_tmp_yaml=pipeDir+"/txpipe_tmp.yml"
-    print("Temporary txpipe yaml file : ", txpipe_tmp_yaml)
-    merge_yaml_files(pipe_config_env["txpipe"]["pipeline_yaml"],  
-                        pipe_config_env["survey"]["survey_data_files"],     
-                        txpipe_tmp_yaml)    
-    
-    # Finalize the txpipe yaml file  (replace env variables by real names)
-    #     a txpipe_standalone.ymal is stored in the pipeline directory
-    txpipe_final_yaml=pipeDir+"/txpipe_standalone.yml"
-    expand_variable_yaml_file(txpipe_tmp_yaml, txpipe_final_yaml,pipe_config["setup"]["env_variables"])
-    yaml_set_value(final_global_pipeline,"txpipe:pipeline_yaml",txpipe_final_yaml)
-    
-    # Copy the txpipe config yaml file to pipeline directory
-    configYamlFile = yaml_get_value(txpipe_final_yaml, "config")
-    local_configYamlFile = pipeDir+"/"+configYamlFile.split("/")[-1]
-    shutil.copy(configYamlFile,local_configYamlFile)
-    # Modify the config key in the txpipe yaml in order to point to the pipedir config file
-    yaml_set_value(txpipe_final_yaml,"config",local_configYamlFile)
-    yaml_set_value(final_global_pipeline,"txpipe:config_yaml",local_configYamlFile)
-    
-    # Finalize the config yaml file (replace env variables by real names)
-    expand_variable_yaml_file(local_configYamlFile, None, pipe_config["setup"]["env_variables"])
-    
-
-    # ---------------------------------------------------------
-    # Create TJPCov and FireCrown yaml file
-    # ---------------------------------------------------------
-
-    # Set the environement variables as defined in clpipeline yaml file
-    reset_environment_parameter(pipe_config)
-    setup_environment_parameter(pipe_config, "pipeline", True)
-    setup_environment_parameter(pipe_config, "tjpcov_firecrown", True)
-    setup_environment_parameter(pipe_config, "survey", True)
-
-    # Read the tjpcov_firecrown section from yaml file
-    config_text_init = os.path.expandvars(raw_text)
-    pipe_config_env = yaml.safe_load(config_text_init)
-
-    # Copy the tjpcov_firecron pipeline yaml file to the pipeline directory
-    pipelineYamlFile = pipe_config_env["tjpcov_firecrown"]["pipeline_yaml"]
-    local_pipelineYamlFile = pipeDir+"/"+pipelineYamlFile.split("/")[-1]
-    shutil.copy(pipelineYamlFile,local_pipelineYamlFile)
-
-    # Finalize the pipeline yaml file (replace env variables by real names)
-    expand_variable_yaml_file(local_pipelineYamlFile, None, pipe_config["setup"]["env_variables"])
-    yaml_set_value(final_global_pipeline,"tjpcov_firecrown:pipeline_yaml",local_pipelineYamlFile)
-    yaml_set_value(final_global_pipeline,"pipeline:CLpipeline_yaml",local_pipelineYamlFile)
-    
-    # Copy the config.yaml file to the pipeline directory
-    #    ( taking into account that config files are defined in different sections of the yaml file )
-    configYamlFile = yaml_get_value(local_pipelineYamlFile, "config")
-    print(">>>>>>>> " ,configYamlFile)
-    copiedYamlFiles=[]
-    for nameConfig in configYamlFile:
-        if nameConfig==None:
-            copiedYamlFiles.append(None)
-            continue
-        local_configYamlFile = pipeDir+"/"+nameConfig.split("/")[-1]
-        if local_configYamlFile in copiedYamlFiles:
-            copiedYamlFiles.append(local_configYamlFile)
-            continue
-        # copy yaml file to pipeline directory
-        shutil.copy(nameConfig,local_configYamlFile)
-        # Finalize config yaml file (replace env variables by real names)
-        expand_variable_yaml_file(local_configYamlFile, None, pipe_config["setup"]["env_variables"])
-
-    # Update config yaml file names in pipeline yaml file
-    for i,v in enumerate(copiedYamlFiles):
-        if v==None: continue
-        yaml_set_value(local_pipelineYamlFile,"config",v,i)
-
-    yaml_set_value(final_global_pipeline,"tjpcov_firecrown:config_yaml",local_configYamlFile)
-
-
-    # ---------------------------------------------------------
-    # Update TxPipe document nested in concatenated yaml file
-    # ---------------------------------------------------------
-    update_yaml_file_document(local_pipelineYamlFile,txpipe_final_yaml,"id:TXPipe")
-
-
-    
-
-
     
