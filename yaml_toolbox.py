@@ -329,6 +329,7 @@ def expand_variable_yaml_file(fileinit,fileres,inputList):
             if varName in textLine:
                 bVariableFound = True
                 textLine = textLine.replace(varName,os.environ[vName])
+                textLine = textLine.replace(vName,os.environ[vName])
 
     if fileres==None: fileres=fileinit
     f=open(fileres,"w")

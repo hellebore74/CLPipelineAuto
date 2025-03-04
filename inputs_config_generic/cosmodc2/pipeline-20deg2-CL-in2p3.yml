@@ -1,8 +1,10 @@
 #this step depends on where you run
 #for CCin2p3
 site:
-    name: local
-    max_threads: 4
+    name: cc-parallel
+    mpi_command: "mpirun -n"
+    #name: local
+    #max_threads: 4
 #site:
 #    name: cori-batch
 #    image: ghcr.io/lsstdesc/txpipe-dev
