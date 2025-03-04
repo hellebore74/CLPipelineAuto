@@ -28,9 +28,10 @@ def setup_environment_parameter(pipe_config,jobId, bVerbose=False):
     print(f"Env parameter to be set : {newParamList}")
     for p in newParamList:
         name,value = p
-        os.environ[name] = value
+        os.environ[name] = os.path.expandvars(value)
     if not bVerbose: return
 
+    print(f"*** ENV for {jobId} ****************")
     for p in envParam:
         pName = p.upper()
         if pName in os.environ: print(f"{pName} : {os.environ[pName]}")
@@ -325,11 +326,12 @@ def expand_variable_yaml_file(fileinit,fileres,inputList):
         for v in variableList:
             vName = v.upper()
             if not vName in os.environ: continue
-            varName = "${"+vName+"}"
-            if varName in textLine:
+            varName1 = "${"+vName+"}"
+            varName2 = "$"+vName
+            if varName1 in textLine or varName2 in textLine:
                 bVariableFound = True
-                textLine = textLine.replace(varName,os.environ[vName])
-                textLine = textLine.replace(vName,os.environ[vName])
+                textLine = textLine.replace(varName1,os.environ[vName])
+                textLine = textLine.replace(varName2,os.environ[vName])
 
     if fileres==None: fileres=fileinit
     f=open(fileres,"w")

@@ -78,30 +78,40 @@ def create_setup_variable_file(filename,filename_setup):
     reset_environment_parameter(pipe_config)
     setup_environment_parameter(pipe_config, "pipeline", True)
     setup_environment_parameter(pipe_config, "survey", True)
+    setup_environment_parameter(pipe_config, "setup", True)
     setup_environment_parameter(pipe_config, "txpipe", True)
+    config_text_init = os.path.expandvars(raw_text)
+    pipe_config_expand = yaml_ruamel.load(config_text_init)
 
     for v0 in varList:
         v=v0.upper()
-        if v in os.environ: text.append(f"export {v}={os.environ[v]}\n")
+        if v in os.environ: text.append(f'export {v}="{os.environ[v]}"\n')
 
-    f=open(filename_setup.replace(".","_txpipe."),"w")
+    filename_output=pipe_config_expand["txpipe"]["setup_file"]
+    f=open(filename_output,"w")
     f.writelines(text)
     f.close()
-
-    # Create environment variables for the tjpcov/firecrown pipeline
+    expand_variable_yaml_file(filename_output,None,pipe_config["setup"]["env_variables"])
+    
+    # Create environment variables for the tjpcov/firecrown pipeline    
     text=[]
     reset_environment_parameter(pipe_config)
     setup_environment_parameter(pipe_config, "pipeline", True)
     setup_environment_parameter(pipe_config, "survey", True)
+    setup_environment_parameter(pipe_config, "setup", True)
     setup_environment_parameter(pipe_config, "tjpcov_firecrown", True)
+    config_text_init = os.path.expandvars(raw_text)
+    pipe_config_expand = yaml_ruamel.load(config_text_init)
 
     for v0 in varList:
         v=v0.upper()
-        if v in os.environ: text.append(f"export {v}={os.environ[v]}\n")
+        if v in os.environ: text.append(f'export {v}="{os.environ[v]}"\n')
 
-    f=open(filename_setup_init.replace(".","_tjpcov_firecrown."),"w")
+    filename_output=pipe_config_expand["tjpcov_firecrown"]["setup_file"]
+    f=open(filename_output,"w")
     f.writelines(text)
     f.close()    
+    expand_variable_yaml_file(filename_output,None,pipe_config["setup"]["env_variables"])
 
     return
 
@@ -252,7 +262,7 @@ def createPipelineSetup(filename):
     # Create environement variable setup file
     # ---------------------------------------------------------
     local_setupFile = pipeDir+"/setup.sh"
-    create_setup_variable_file(filename, local_setupFile)
+    create_setup_variable_file(final_global_pipeline, local_setupFile)
 
     # ---------------------------------------------------------
     # Create output and log dirs

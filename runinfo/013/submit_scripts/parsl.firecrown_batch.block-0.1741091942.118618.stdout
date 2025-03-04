@@ -1,0 +1,29 @@
+**********************************************************************
+*                         SLURM Batch System                         *
+*              IN2P3 Computing Centre, Villeurbanne FR               *
+**********************************************************************
+* Date:                 Tue Mar  4 01:39:03 PM CET 2025
+* Job name:             parsl.firecrown_batch.block-0.1741091942.118618
+* Job id:               48369201
+* User:                 elles
+* Account:              lsst
+* Submit host:          cca020
+* Partition:            lsst
+* Quality of service:   normal
+* Nodelist:             ccwslurm2005
+* Operating System:     Red Hat Enterprise Linux release 9.4 (Plow)
+* Architecture:         x86_64
+**********************************************************************
+Found cores : 112
+Launching worker: 1
+****************************************************************
+*                      SLURM Batch System                      *
+*           IN2P3 Computing Centre, Villeurbanne FR            *
+****************************************************************
+Date: Tue Mar  4 03:02:15 PM CET 2025
+Job informations can be found using these commands:
+Accounting:
+sacct -j 48369201
+Efficiency:
+seff 48369201
+****************************************************************
