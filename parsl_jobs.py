@@ -200,9 +200,6 @@ def main():
 
     site_data, maxProcess  = get_batch_data(general_CLpipeline_yaml, "TXPipe")
 
-    print(site_data)
-    print(maxProcess)
-
     if "max_threads" in site_data and site_data["max_threads"]<maxProcess:
         set_max_process_defined_in_stages(general_CLpipeline_yaml,[("id","TXPipe")],site_data["max_threads"])
 
@@ -213,19 +210,10 @@ def main():
     if not bTxPipeJobDone:
         print("\n>>>> TXPIPE JOB")
         if site_data["name"]=="local":
-            extra_script_setup=clpipe_config["setup"]["extra_conda_setup"]
-            jobTxPipe = run_txpipe_local( clpipe_config["txpipe"]["conda_dir"],
-                                            extra_script_setup,
-                                            general_CLpipeline_yaml
-                                            )
-
+            jobTxPipe = run_txpipe_local(clpipe_config["txpipe"]["setup_file"])
         else :
             print(" - mpi option")
-            extra_script_setup=clpipe_config["setup"]["extra_mpi_setup"]
-            jobTxPipe = run_txpipe( clpipe_config["txpipe"]["conda_dir"],
-                                    extra_script_setup,
-                                    general_CLpipeline_yaml
-                                    )
+            jobTxPipe = run_txpipe(clpipe_config["txpipe"]["setup_file"])
             
         bashing.append(jobTxPipe)
 

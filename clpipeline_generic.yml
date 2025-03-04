@@ -2,7 +2,7 @@
 pipeline:
   pipeline_id: ccin2p3_cosmodc2_20deg
   local_dir: /sps/lsst/users/elles/CLPipeline_parsl/venv_parsl/CLPipelineAuto
-  output_dir: ${LOCAL_DIR}/${PIPELINE_ID}/output
+  output_dir: ${LOCAL_DIR}/${PIPELINE_ID}_output
   CLpipeline_yaml: xxx
   
 setup:
@@ -12,6 +12,7 @@ setup:
       conda_pipeline_dir local_dir output_dir pipeline_id survey_data_dir survey_data_files pipeline_yaml config_yaml 
       tjpcov_sacc_file tjpcov_outdir txpipe_install_dir setup_file CLpipeline_yaml
       extra_mpi_setup extra_module_setup
+  env_variables_setup:  conda_pipeline_dir txpipe_install_dir CLpipeline_yaml extra_mpi_setup extra_module_setup
 
 survey:
   survey_data_files : ${LOCAL_DIR}/inputs_config_generic/cosmodc2/cosmodc2_20deg2_datafiles.yml

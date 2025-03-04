@@ -71,7 +71,7 @@ def create_setup_variable_file(filename,filename_setup):
     
     filename_setup_init=filename_setup
     pipe_config, raw_text = read_yaml_file_general(filename)
-    varList=[x.strip() for x in pipe_config["setup"]["env_variables"].split(" ") if x!=""]
+    varList=[x.strip() for x in pipe_config["setup"]["env_variables_setup"].split(" ") if x!=""]
     
     # Create environment variables for the txpipe pipeline
     text=[]
