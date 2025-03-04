@@ -34,9 +34,41 @@ def set_max_process_defined_in_stages(yaml_filename, pattern, max_process):
 
     update_yaml_file_document(yaml_filename, "file_tmp.yml", pattern[0]) 
 
+    
+def create_output_and_log_dirs(filename):
+    """ Find the ouput_dir and log_dir parameter defined in global yaml file
+        and create corresponding directories """
 
+    print("OUTPUT AND LOG DIRS : ",filename)
+    dirList=[]
+    
+    index=0
+    bNextIndex=True
+    while bNextIndex:
+        data, raw_test = read_yaml_file_general(filename, index)
+        if data==None:
+            bNextIndex=False
+        else:
+            vList = get_values_recursively(data, "output_dir")
+            dirList=dirList+vList
+            vList = get_values_recursively(data, "log_dir")
+            dirList=dirList+vList
+            index+=1
+
+    print(dirList)
+    for dirname in dirList:
+        if os.path.isdir(dirname): continue
+        print("---> create directory : ",dirname)
+        os.makedirs(dirname)
+        
+    return
+    
+    
+    
 def create_setup_variable_file(filename,filename_setup):
-
+    """ Create setup files (CONDA_DIR, LOCAL_DIR, ...) for txpipe and tjpcov_firecronwn jobs in order
+          to be able to launch the jobs locally """
+    
     filename_setup_init=filename_setup
     pipe_config, raw_text = read_yaml_file_general(filename)
     varList=[x.strip() for x in pipe_config["setup"]["env_variables"].split(" ") if x!=""]
@@ -221,6 +253,11 @@ def createPipelineSetup(filename):
     # ---------------------------------------------------------
     local_setupFile = pipeDir+"/setup.sh"
     create_setup_variable_file(filename, local_setupFile)
+
+    # ---------------------------------------------------------
+    # Create output and log dirs
+    # ---------------------------------------------------------
+    create_output_and_log_dirs(local_pipelineYamlFile)
 
     
 

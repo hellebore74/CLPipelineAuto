@@ -288,8 +288,10 @@ def read_yaml_file_general(filename, index=0, bVerbose=False):
     for data in data_config:
         dataList.append(data)
 
-    return dataList[0], raw_config_text
+    if index<len(dataList):
+        return dataList[index], raw_config_text
 
+    return None, None
 
 
 
@@ -346,3 +348,31 @@ def get_batch_data(filename, dataId):
 
     return data["site"], max(nprocessList)
     
+
+
+def get_values_recursively(search_dict, field):
+    """
+    Takes a dict with nested lists and dicts,
+    and searches all dicts for a key of the field
+    provided.
+    """
+    fields_found = []
+
+    for key, value in search_dict.items():
+
+        if key == field:
+            fields_found.append(value)
+
+        elif isinstance(value, dict):
+            results = get_values_recursively(value, field)
+            for result in results:
+                fields_found.append(result)
+
+        elif isinstance(value, (list, tuple)):
+            for item in value:
+                if isinstance(item, dict):
+                    more_results = get_values_recursively(item, field)
+                    for another_result in more_results:
+                        fields_found.append(another_result)
+
+    return fields_found
